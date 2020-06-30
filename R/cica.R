@@ -1,57 +1,29 @@
-
-#' Implement different W same T group-colorICA algorithm.
+#' To extract source signals from a mixture X. X is an M by T matrix
+#' where M index the voxles and T index time points.
 #'
-#' @param Xc      G by NG cell-array contains observed         [cell-array]
-#' data matrices. G is the number of groups and NG is the number of subjects in each group.
-#' Each component of the cell-array is a matrix with dimension M by T
-#' where M is the number of mixtures and T is the number of time points.
-#' Each data matrix has been pre-whitenned and centered.
+#' @param X       M by T matrix. M is the number of observed         [matrix]
+#' mixtures (also the number of sources) and T is the
+#' number of time series points. X will be centered
+#' within the algorithm.
 #'
 #' @return W: M by M unmixitng matrix
 #' @export
 #'
 #' @examples
-#' x=rnorm(10)
-gcica_bss_dwst = function(Xc, scovmatdnmntropt = 'sz', prewhite = 1){
 
-  #------------------------------------------------------------------
-  #----------------- PREPROCESSING ----------------------------------
-  #------------------------------------------------------------------
-  # M: Number of  mixutures (number of sources)
-  # N: number of time points
-  M = nrow(Xc[[1, 1]])
-  N = ncol(Xc[[1, 1]])
 
-  # Number of groups
-  num_group = length(Xc[[, 1]])
-
-  # Number of subjects in each group
-  num_group_subject = lapply(1:num_group, function(i){
-    not_null_count = 0
-    for (j in 1:N){
-      if (!is.null(Xc[i,][[j]])){
-        not_null_count = not_null_count + 1
-      }
-    }
-    return(not_null_count)
-  })
-
-  #  Denominator used to calculate sample covariance matrix
-  #       'sz': using sample size N [default]
-  #       'szm1': sample size - 1 (N - 1)
-  if (scovmatdnmntropt == 'sz'){
-    scovmatdnmntr = N
-  } else{
-    scovmatdnmntr = N - 1
+cICA = function (Xin, M = dim(Xin)[1], Win = diag(M), tol = 1e-04, maxit = 20,
+                 nmaxit = 1, unmixing.estimate = "eigenvector", maxnmodels = 100, batch_size = 32) {
+  p = dim(Xin)[1]
+  if (M > p) {
+    stop("Number of sources must be less or equal than number \n  of variables")
   }
-
-
-  # Prewhite
-  if (prewhite == 1)
-    scovmatdnmntr = N
+  if (unmixing.estimate != "eigenvector" && unmixing.estimate !=
+      "newton") {
+    stop("Methods to estimate the unmixing matrix can be \n  'eigenvector' or 'newton' only")
   }
-
-  Xc = t(scale(t(Xc), center = TRUE, scale = FALSE))
+  N = ncol(Xin)
+  Xc = t(scale(t(Xin), center = TRUE, scale = FALSE))
   svdcovmat = svd(Xc/sqrt(N))
   K = t(svdcovmat$u %*% diag(1/svdcovmat$d))
   K = K[1:M, ]
