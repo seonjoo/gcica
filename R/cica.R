@@ -52,7 +52,7 @@ cICA = function (Xin, M = dim(Xin)[1], Win = diag(M), tol = 1e-04, maxit = 20,
     index1 = as.double(gl(M, M))
     index2 = as.double(gl(M, 1, M^2))
     indx = 2:(freqlength + 1)
-    tmp = Re(X.dft[index1, indx] * Conj(X.dft[index2, indx]))
+    tmp = Re(X.dft[index1, indx] * Conj(X.dft[index2, indx])) #lapply
     while (lim > tol & iter < maxit & NInv < nmaxit) {
       iter = iter + 1
       taucount = 1
