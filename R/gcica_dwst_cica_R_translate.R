@@ -12,8 +12,9 @@
 #' @examples
 
 
-gcica_bss_dwst = function (Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M), tol = 1e-04, maxit = 20,
-                 nmaxit = 1, unmixing.estimate = "eigenvector", maxnmodels = 100, num_cores = 2) {
+gcica_bss_dwst = function (Xc, M = nrow(Xc[[1]][[1]]), W1 = lapply(1:length(Xc), function(i){diag(M)}),
+                           tol = 1e-04, maxit = 20, nmaxit = 1,
+                           maxnmodels = 100, num_cores = 2) {
   #################
   # Load packages #
   #################

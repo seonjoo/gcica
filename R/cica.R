@@ -13,7 +13,7 @@
 
 
 cICA = function (Xin, M = dim(Xin)[1], Win = diag(M), tol = 1e-04, maxit = 20,
-                 nmaxit = 1, unmixing.estimate = "eigenvector", maxnmodels = 100, batch_size = 32) {
+                 nmaxit = 1, unmixing.estimate = "eigenvector", maxnmodels = 100) {
   p = dim(Xin)[1]
   if (M > p) {
     stop("Number of sources must be less or equal than number \n  of variables")
