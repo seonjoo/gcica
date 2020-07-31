@@ -12,7 +12,7 @@
 #' @examples
 
 
-gcica_bss_dwst = function (Xc, M = nrow(Xc[[1]][[1]]), W1 = lapply(1:length(Xc), function(i){diag(M)}),
+gcica_bss_dwst = function (Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
                            tol = 1e-04, maxit = 20, nmaxit = 1,
                            maxnmodels = 100, num_cores = 2) {
   #################
@@ -60,13 +60,13 @@ gcica_bss_dwst = function (Xc, M = nrow(Xc[[1]][[1]]), W1 = lapply(1:length(Xc),
     freqlength = floor(N/2 - 1)
     freq = 1:freqlength * 2 * pi/N
 
-    g = W1
-    g[[i]] = matrix(0, M, freqlength)
+
+    g = matrix(0, M, freqlength)
 
 
     # Initial source
     for (j in 1:num_group_subject[i]) {
-      WXc[[i]][[j]] = W1[[i]] %*% Xc[[i]][[j]]
+      WXc[[i]][[j]] = W1 %*% Xc[[i]][[j]]
     }
 
     # Discrete Fourier Transformation
@@ -91,10 +91,10 @@ gcica_bss_dwst = function (Xc, M = nrow(Xc[[1]][[1]]), W1 = lapply(1:length(Xc),
     for (m in 1:M) {
       fit = ar.yw(sourcetsik[[m]], order.max = maxnmodels)
       if (fit$order == 0){
-        g[[i]][m, ] = fit$var.pred/(2 * pi) * rep(1, freqlength)
+        g[m, ] = fit$var.pred/(2 * pi) * rep(1, freqlength)
       }
       else {
-        g[[i]][m, ] = (fit$var.pred/(2 * pi))/(abs(1 - matrix(fit$ar, 1, fit$order) %*%
+        g[m, ] = (fit$var.pred/(2 * pi))/(abs(1 - matrix(fit$ar, 1, fit$order) %*%
         exp(-(0+1i) * matrix(1:fit$order, fit$order, 1) %*% freq))^2)
       }
     }
@@ -127,13 +127,13 @@ gcica_bss_dwst = function (Xc, M = nrow(Xc[[1]][[1]]), W1 = lapply(1:length(Xc),
           Gam = 0
           if (m > 1) {
             for (k in 1:(m - 1)) {
-              nu = matrix(W2[[i]][k, ], M, 1) %*% matrix(W2[[i]][k, ], 1, M)
+              nu = matrix(W2[k, ], M, 1) %*% matrix(W2[k, ], 1, M)
               Gam = Gam + nu
             }
           }
 
           tmpmat = lapply(1:num_group_subject[i], function(j){
-            t(matrix(tmp[[i]][[j]] %*% matrix(1/g[[i]][m, ],
+            t(matrix(tmp[[i]][[j]] %*% matrix(1/g[m, ],
                                               freqlength, 1), M, M))
           })
 
@@ -176,8 +176,8 @@ gcica_bss_dwst = function (Xc, M = nrow(Xc[[1]][[1]]), W1 = lapply(1:length(Xc),
         if (fit$order == 0)
           g[j, ] = fit$var.pred/(2 * pi) * rep(1, freqlength)
         else g[j, ] = (fit$var.pred/(2 * pi))/(abs(1 -
-                                                     matrix(fit$ar, 1, fit$order) %*% exp(-(0+1i) *
-                                                                                            matrix(1:fit$order, fit$order, 1) %*% freq))^2)
+          matrix(fit$ar, 1, fit$order) %*% exp(-(0+1i) *
+          matrix(1:fit$order, fit$order, 1) %*% freq))^2)
       }
       if (NInv == nmaxit) {
         print("Color ICA: no convergence")
@@ -189,17 +189,20 @@ gcica_bss_dwst = function (Xc, M = nrow(Xc[[1]][[1]]), W1 = lapply(1:length(Xc),
     }
     }
 
-    wt = W2 %*% K
+    wt = lapply(1:num_group_subject[i], function(j){
+      W2 %*% K[[i]][[j]]})
     result = new.env()
     result$W = W2
-    result$K = K
-    result$A = t(wt) %*% solve(wt %*% t(wt))
-    result$S = wt %*% Xin
-    result$X = Xin
+    result$K = K[[i]]
+    result$A = lapply(1:num_group_subject[i], function(j){
+      t(wt[[j]]) %*% solve(wt[[j]] %*% t(wt[[j]]))})
+    result$S = lapply(1:num_group_subject[i], function(j){
+      wt[[j]] %*% Xc[[i]][[j]]})
+    result$X = Xc[[i]]
     result$iter = iter
     result$NInv = NInv
     result$den = g
-    as.list(result)
+    result = as.list(result)
     return(result)
 }
 return(result)
