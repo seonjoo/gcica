@@ -41,12 +41,13 @@ gcica_bss_dwst = function (Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
     return(length(Xc[[i]]))
   })
 
-  result = foreach(i = 1:num_group) %dopar% {
+  for (i in 1:num_group){
+  #result = foreach(i = 1:num_group) %dopar% {
     # Prewhite
     if (prewhite == 1){
     svdcovmat = Xc
     K = Xc
-    for (j in 1:num_group_subject[i]) {
+    for (j in 1:num_group_subject[[i]]) {
       Xc[[i]][[j]] = t(scale(t(Xc[[i]][[j]]), center=TRUE, scale=FALSE))
       svdcovmat[[i]][[j]] = svd(Xc[[i]][[j]]/sqrt(N))
       K[[i]][[j]] = t(svdcovmat[[i]][[j]]$u %*% diag(1/svdcovmat[[i]][[j]]$d))
@@ -65,14 +66,14 @@ gcica_bss_dwst = function (Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
 
 
     # Initial source
-    for (j in 1:num_group_subject[i]) {
+    WXc = Xc
+    for (j in 1:num_group_subject[[i]]) {
       WXc[[i]][[j]] = W1 %*% Xc[[i]][[j]]
     }
 
     # Discrete Fourier Transformation
     X_dftall = Xc
-
-    for (j in 1:num_group_subject[i]) {
+    for (j in 1:num_group_subject[[i]]) {
       X_dftall[[i]][[j]] = t(mvfft(t(Xc[[i]][[j]])))/sqrt(2 * pi * N)
     }
 
@@ -80,9 +81,9 @@ gcica_bss_dwst = function (Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
     # Currently don't know how to dopar
     sourcetsik = rep(NA, M)
     for (m in 1:M) {
-      sourcetsik[[m]] = matrix(0, nrow = sum(num_subj_group), ncol = N)
+      sourcetsik[[m]] = matrix(0, nrow = do.call(sum,num_group_subject), ncol = N)
       l = 1
-      for (j in 1:num_group_subject[i]){
+      for (j in 1:num_group_subject[[i]]){
         l = l + 1
         sourcetsik[[m]][l, ] = WXc[[i]][[j]][m, ]
       }
@@ -107,7 +108,7 @@ gcica_bss_dwst = function (Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
     index2 = as.double(gl(M, 1, M^2))
     indx = 2:(freqlength + 1)
 
-    tmp = lapply(1:num_group_subject[i], function(j){
+    tmp = lapply(1:num_group_subject[[i]], function(j){
       Re(X_dftall[[i]][[j]][index1, indx] *
            Conj(X_dftall[[i]][[j]][index2, indx]))
     })
@@ -132,7 +133,7 @@ gcica_bss_dwst = function (Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
             }
           }
 
-          tmpmat = lapply(1:num_group_subject[i], function(j){
+          tmpmat = lapply(1:num_group_subject[[i]], function(j){
             t(matrix(tmp[[i]][[j]] %*% matrix(1/g[m, ],
                                               freqlength, 1), M, M))
           })
@@ -189,14 +190,14 @@ gcica_bss_dwst = function (Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
     }
     }
 
-    wt = lapply(1:num_group_subject[i], function(j){
+    wt = lapply(1:num_group_subject[[i]], function(j){
       W2 %*% K[[i]][[j]]})
     result = new.env()
     result$W = W2
     result$K = K[[i]]
-    result$A = lapply(1:num_group_subject[i], function(j){
+    result$A = lapply(1:num_group_subject[[i]], function(j){
       t(wt[[j]]) %*% solve(wt[[j]] %*% t(wt[[j]]))})
-    result$S = lapply(1:num_group_subject[i], function(j){
+    result$S = lapply(1:num_group_subject[[i]], function(j){
       wt[[j]] %*% Xc[[i]][[j]]})
     result$X = Xc[[i]]
     result$iter = iter
