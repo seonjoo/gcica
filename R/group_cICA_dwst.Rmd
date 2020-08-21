@@ -31,7 +31,13 @@ female = list(matrix(rnorm(10),M,N),matrix(rnorm(10),M,N),matrix(rnorm(10),M,N))
 
 Xc = list(male, female)
 
+start_time = Sys.time()
+
 gcica_bss_dwst(Xc)
+
+end_time = Sys.time()
+
+end_time - start_time
 ```
 
 

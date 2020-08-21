@@ -84,8 +84,8 @@ gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
     return(length(Xc[[i]]))
   })
 
-  result = lapply(1:num_group, function(i){
-    # foreach(i = 1:num_group) %dopar% {
+  result = foreach(i = 1:num_group) %dopar% {
+    # lapply(1:num_group, function(i)
     # Prewhite
     if (prewhite == 1){
     svdcovmat = Xc
@@ -142,7 +142,7 @@ gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
       }
     }
 
-    rm(list = c("WXc"))
+    #rm(list = c("WXc"))
     lim = 1
     iter = 0
     NInv = 0
@@ -179,12 +179,11 @@ gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
             t(matrix(tmp[[j]] %*% matrix(1/g[m, ],
                                               freqlength, 1), M, M))
           })
-
-          tmpmat = do.call(sum, tmpmat)
+          tmpmat = Reduce('+', tmpmat)
           tmpV = tmpmat + tau * Gam
           eigenv = eigen(tmpV)
           eigenval[m] = eigenv$values[M]
-          W2[m, ] = eigenv$vectors[,M] # Why out of bounds?
+          W2[m, ] = eigenv$vectors[,M]
         }
         orthoerror = sum(sum((W2 %*% t(W2) - diag(rep(1,M)))^2))
         err = amari_distance(rerow(W1), rerow(W2))
@@ -198,9 +197,7 @@ gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
         wlik = wlik2
       }
       else print(paste("Color ICA - Iteration ", iter,
-                       ": current Whittle likelihood(", wlik2, ")
-                       is smaller than previous one (",
-                       wlik, ")."))
+                       ": current Whittle likelihood (", wlik2, ") is smaller than previous one (", wlik, ")."))
       lim = err
       print(paste("Color ICA - Iteration ", iter, ": error is equal to ",
                   lim, sep = ""))
@@ -257,12 +254,12 @@ gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
       t(wt[[j]]) %*% solve(wt[[j]] %*% t(wt[[j]]))})
     result$S = lapply(1:num_group_subject[[i]], function(j){
       wt[[j]] %*% Xc[[i]][[j]]})
-    result$X = Xc[[i]]
+    #result$X = Xc[[i]]
     result$iter = iter
     result$NInv = NInv
     result$den = g
     result = as.list(result)
     return(result)
-})
+}
 return(result)
   }
