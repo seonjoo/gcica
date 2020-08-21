@@ -12,23 +12,66 @@
 #' @examples
 
 
-gcica_bss_dwst = function (Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
+gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
                            tol = 1e-04, maxit = 20, nmaxit = 1,
-                           maxnmodels = 100, prewhite = 1, num_cores = 2) {
+                           maxnmodels = 10, prewhite = 1, num_cores = 2) {
   #################
   # Load packages #
   #################
   library(doParallel)
   library(pracma)
+  library(itsmr)
   registerDoParallel(cores = num_cores)
+  #################################################
+  # Modified Yule-Walker Algorithm for Group Data #
+  #################################################
+  group_yw = function(Xc){
+    all_models = lapply(2:maxnmodels, function(p){
+      n = length(Xc[1,])
+      gamma = foreach(i = 1:nrow(Xc)) %dopar% {
+        x_center = Xc[i,] - mean(Xc[i,])
+        gamma = acvf(x_center, p)
+        return(gamma)
+      }
+      Gamma = foreach(i = 1:nrow(Xc)) %dopar% {
+        x_center = Xc[i,] - mean(Xc[i,])
+        gamma = acvf(x_center, p)
+        Gamma = toeplitz(gamma[1:p])
+        return(Gamma)
+      }
+      gamma = Reduce("+", gamma) / length(gamma)
+      Gamma = Reduce("+", Gamma) / length(Gamma)
+      phi = solve(Gamma, gamma[2:(p + 1)])
+      v = gamma[1] - drop(crossprod(gamma[2:(p + 1)], phi))
+      V = v * solve(Gamma)
+      se.phi = sqrt(1/n * diag(V))
+      a = list(phi = phi, theta = 0, sigma2 = NA, aicc = NA, se.phi = se.phi,
+                se.theta = 0)
+      a1 = lapply(1:nrow(Xc), function(i){.innovation.update(Xc[i,], a)})
+      a = list(phi = phi, theta = 0,
+               sigma2 = do.call(sum, lapply(1:nrow(Xc), function(i){a1[[i]]$sigma2}))/nrow(Xc),
+               aicc = do.call(sum, lapply(1:nrow(Xc), function(i){a1[[i]]$aicc}))/nrow(Xc),
+               se.phi = se.phi,
+               se.theta = 0, p = p)
+      return(a)
+    })
+    aicc_threshold = Inf
+    for (i in 1:length(all_models)){
+      if (all_models[[i]]$aicc < aicc_threshold){
+        a = all_models[[i]]
+        aicc_threshold = all_models[[i]]$aicc
+      }
+    }
+    return(a)
+  }
 
   #################
   # Preprocessing #
   #################
   # M: Number of mixutures (number of sources)
   # N: number of time points
-  p = nrow(Xc[[1]][[1]])
-  if (M > p) {
+  Xc_rows = nrow(Xc[[1]][[1]])
+  if (M > Xc_rows) {
     stop("Number of sources must be less or equal than number \n  of variables")
   }
   N = ncol(Xc[[1]][[1]])
@@ -41,8 +84,8 @@ gcica_bss_dwst = function (Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
     return(length(Xc[[i]]))
   })
 
-  for (i in 1:num_group){
-  #result = foreach(i = 1:num_group) %dopar% {
+  result = lapply(1:num_group, function(i){
+    # foreach(i = 1:num_group) %dopar% {
     # Prewhite
     if (prewhite == 1){
     svdcovmat = Xc
@@ -78,8 +121,7 @@ gcica_bss_dwst = function (Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
     }
 
     # Estimate time series order p and parameters phi
-    # Currently don't know how to dopar
-    sourcetsik = rep(NA, M)
+    sourcetsik = rep(list(), M)
     for (m in 1:M) {
       sourcetsik[[m]] = matrix(0, nrow = do.call(sum,num_group_subject), ncol = N)
       l = 1
@@ -90,13 +132,13 @@ gcica_bss_dwst = function (Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
     }
 
     for (m in 1:M) {
-      fit = ar.yw(sourcetsik[[m]], order.max = maxnmodels)
-      if (fit$order == 0){
-        g[m, ] = fit$var.pred/(2 * pi) * rep(1, freqlength)
+      fit = group_yw(sourcetsik[[m]])
+      if (fit$p == 0){
+        g[m, ] = fit$sigma2/(2 * pi) * rep(1, freqlength)
       }
       else {
-        g[m, ] = (fit$var.pred/(2 * pi))/(abs(1 - matrix(fit$ar, 1, fit$order) %*%
-        exp(-(0+1i) * matrix(1:fit$order, fit$order, 1) %*% freq))^2)
+        g[m, ] = (fit$sigma2/(2 * pi))/(abs(1 - matrix(fit$phi, 1, fit$p) %*%
+        exp(-(0+1i) * matrix(1:fit$p, fit$p, 1) %*% freq))^2)
       }
     }
 
@@ -134,7 +176,7 @@ gcica_bss_dwst = function (Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
           }
 
           tmpmat = lapply(1:num_group_subject[[i]], function(j){
-            t(matrix(tmp[[i]][[j]] %*% matrix(1/g[m, ],
+            t(matrix(tmp[[j]] %*% matrix(1/g[m, ],
                                               freqlength, 1), M, M))
           })
 
@@ -142,7 +184,7 @@ gcica_bss_dwst = function (Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
           tmpV = tmpmat + tau * Gam
           eigenv = eigen(tmpV)
           eigenval[m] = eigenv$values[M]
-          W2[m, ] = eigenv$vectors[, M]
+          W2[m, ] = eigenv$vectors[,M] # Why out of bounds?
         }
         orthoerror = sum(sum((W2 %*% t(W2) - diag(rep(1,M)))^2))
         err = amari_distance(rerow(W1), rerow(W2))
@@ -171,15 +213,31 @@ gcica_bss_dwst = function (Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
         iter = 0
         NInv = NInv + 1
       }
-      WXc = W2 %*% Xc
-      for (j in 1:M) {
-        fit = ar.yw(WXc[j, ], order.max = maxnmodels)
-        if (fit$order == 0)
-          g[j, ] = fit$var.pred/(2 * pi) * rep(1, freqlength)
-        else g[j, ] = (fit$var.pred/(2 * pi))/(abs(1 -
-          matrix(fit$ar, 1, fit$order) %*% exp(-(0+1i) *
-          matrix(1:fit$order, fit$order, 1) %*% freq))^2)
+
+      for (j in 1:num_group_subject[[i]]) {
+        WXc[[i]][[j]] = W2 %*% Xc[[i]][[j]]
       }
+
+      for (m in 1:M) {
+        sourcetsik[[m]] = matrix(0, nrow = do.call(sum,num_group_subject), ncol = N)
+        l = 1
+        for (j in 1:num_group_subject[[i]]){
+          l = l + 1
+          sourcetsik[[m]][l, ] = WXc[[i]][[j]][m, ]
+        }
+      }
+
+      for (m in 1:M) {
+        fit = group_yw(sourcetsik[[m]])
+        if (fit$p == 0){
+          g[m, ] = fit$sigma2/(2 * pi) * rep(1, freqlength)
+        }
+        else {
+          g[m, ] = (fit$sigma2/(2 * pi))/(abs(1 - matrix(fit$phi, 1, fit$p) %*%
+                   exp(-(0+1i) * matrix(1:fit$p, fit$p, 1) %*% freq))^2)
+        }
+      }
+
       if (NInv == nmaxit) {
         print("Color ICA: no convergence")
       }
@@ -205,6 +263,6 @@ gcica_bss_dwst = function (Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
     result$den = g
     result = as.list(result)
     return(result)
-}
+})
 return(result)
   }
