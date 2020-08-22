@@ -85,17 +85,17 @@ gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
   })
 
   result = foreach(i = 1:num_group) %dopar% {
-    # lapply(1:num_group, function(i)
+    #lapply(1:num_group, function(i){
     # Prewhite
     if (prewhite == 1){
-    svdcovmat = Xc
-    K = Xc
+    svdcovmat = Xc[[i]]
+    K = Xc[[i]]
     for (j in 1:num_group_subject[[i]]) {
       Xc[[i]][[j]] = t(scale(t(Xc[[i]][[j]]), center=TRUE, scale=FALSE))
-      svdcovmat[[i]][[j]] = svd(Xc[[i]][[j]]/sqrt(N))
-      K[[i]][[j]] = t(svdcovmat[[i]][[j]]$u %*% diag(1/svdcovmat[[i]][[j]]$d))
-      K[[i]][[j]] = K[[i]][[j]][1:M, ]
-      Xc[[i]][[j]] = K[[i]][[j]] %*% Xc[[i]][[j]]
+      svdcovmat[[j]] = svd(Xc[[i]][[j]]/sqrt(N))
+      K[[j]] = t(svdcovmat[[j]]$u %*% diag(1/svdcovmat[[j]]$d))
+      K[[j]] = K[[j]][1:M, ]
+      Xc[[i]][[j]] = K[[j]] %*% Xc[[i]][[j]]
     }
 
 
@@ -109,15 +109,15 @@ gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
 
 
     # Initial source
-    WXc = Xc
+    WXc = Xc[[i]]
     for (j in 1:num_group_subject[[i]]) {
-      WXc[[i]][[j]] = W1 %*% Xc[[i]][[j]]
+      WXc[[j]] = W1 %*% Xc[[i]][[j]]
     }
 
     # Discrete Fourier Transformation
-    X_dftall = Xc
+    X_dftall = Xc[[i]]
     for (j in 1:num_group_subject[[i]]) {
-      X_dftall[[i]][[j]] = t(mvfft(t(Xc[[i]][[j]])))/sqrt(2 * pi * N)
+      X_dftall[[j]] = t(mvfft(t(Xc[[i]][[j]])))/sqrt(2 * pi * N)
     }
 
     # Estimate time series order p and parameters phi
@@ -127,7 +127,7 @@ gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
       l = 1
       for (j in 1:num_group_subject[[i]]){
         l = l + 1
-        sourcetsik[[m]][l, ] = WXc[[i]][[j]][m, ]
+        sourcetsik[[m]][l, ] = WXc[[j]][m, ]
       }
     }
 
@@ -151,8 +151,8 @@ gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
     indx = 2:(freqlength + 1)
 
     tmp = lapply(1:num_group_subject[[i]], function(j){
-      Re(X_dftall[[i]][[j]][index1, indx] *
-           Conj(X_dftall[[i]][[j]][index2, indx]))
+      Re(X_dftall[[j]][index1, indx] *
+           Conj(X_dftall[[j]][index2, indx]))
     })
 
 
@@ -212,7 +212,7 @@ gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
       }
 
       for (j in 1:num_group_subject[[i]]) {
-        WXc[[i]][[j]] = W2 %*% Xc[[i]][[j]]
+        WXc[[j]] = W2 %*% Xc[[i]][[j]]
       }
 
       for (m in 1:M) {
@@ -220,7 +220,7 @@ gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
         l = 1
         for (j in 1:num_group_subject[[i]]){
           l = l + 1
-          sourcetsik[[m]][l, ] = WXc[[i]][[j]][m, ]
+          sourcetsik[[m]][l, ] = WXc[[j]][m, ]
         }
       }
 
@@ -243,17 +243,15 @@ gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
       W2 = Wtmp
       wlik2 = wlik
     }
-    }
+  }
 
-    wt = lapply(1:num_group_subject[[i]], function(j){
-      W2 %*% K[[i]][[j]]})
+    wt = lapply(1:num_group_subject[[i]], function(j){W2 %*% K[[j]]})
     result = new.env()
     result$W = W2
-    result$K = K[[i]]
-    result$A = lapply(1:num_group_subject[[i]], function(j){
-      t(wt[[j]]) %*% solve(wt[[j]] %*% t(wt[[j]]))})
-    result$S = lapply(1:num_group_subject[[i]], function(j){
-      wt[[j]] %*% Xc[[i]][[j]]})
+    result$K = K
+    #result$A = lapply(1:num_group_subject[[i]], function(j){
+      #t(wt[[j]]) %*% solve(wt[[j]] %*% t(wt[[j]]))})
+    result$S = lapply(1:num_group_subject[[i]], function(j){wt[[j]] %*% Xc[[i]][[j]]})
     #result$X = Xc[[i]]
     result$iter = iter
     result$NInv = NInv

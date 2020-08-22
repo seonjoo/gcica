@@ -22,22 +22,32 @@ source('gcica_dwst_cica_R_translate.R')
 ```
 
 
-```{r Group cICA dwst example}
+```{r Group cICA dwst example, message=FALSE, warning=FALSE}
 N=32
 M=3
+A1 = rerow(matrix(runif(M^2)-0.5,M,M))
+A2 = rerow(matrix(runif(M^2)+1,M,M))
+W1 = solve(A1)
+W2 = solve(A2)
 
 male = list(matrix(rnorm(10),M,N),matrix(rnorm(10),M,N),matrix(rnorm(10),M,N),matrix(rnorm(10),M,N),matrix(rnorm(10),M,N))
 female = list(matrix(rnorm(10),M,N),matrix(rnorm(10),M,N),matrix(rnorm(10),M,N))
+
+male = lapply(1:length(male), function(i){A1 %*% male[[i]]})
+female = lapply(1:length(female), function(i){A2 %*% female[[i]]})
 
 Xc = list(male, female)
 
 start_time = Sys.time()
 
-gcica_bss_dwst(Xc)
+gcica = gcica_bss_dwst(Xc)
 
 end_time = Sys.time()
 
 end_time - start_time
+
+amari_distance(W1, gcica[[1]]$W)
+amari_distance(W2, gcica[[2]]$W)
 ```
 
 
