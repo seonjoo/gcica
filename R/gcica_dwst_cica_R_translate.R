@@ -249,8 +249,7 @@ gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
     result = new.env()
     result$W = W2
     result$K = K
-    #result$A = lapply(1:num_group_subject[[i]], function(j){
-      #t(wt[[j]]) %*% solve(wt[[j]] %*% t(wt[[j]]))})
+    result$A = solve(W2)
     result$S = lapply(1:num_group_subject[[i]], function(j){wt[[j]] %*% Xc[[i]][[j]]})
     #result$X = Xc[[i]]
     result$iter = iter

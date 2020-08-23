@@ -23,7 +23,7 @@ source('gcica_dwst_cica_R_translate.R')
 
 
 ```{r Group cICA dwst example, message=FALSE, warning=FALSE}
-N=32
+N=256
 M=3
 A1 = rerow(matrix(runif(M^2)-0.5,M,M))
 A2 = rerow(matrix(runif(M^2)+1,M,M))
@@ -48,6 +48,14 @@ end_time - start_time
 
 amari_distance(W1, gcica[[1]]$W)
 amari_distance(W2, gcica[[2]]$W)
+
+par(mfrow=c(2,2))
+plot(Xc[[1]][[1]][1,],type="l",lwd=2)
+plot(gcica[[1]]$S[[1]][1,],type="l",lwd=2,col="red")
+plot(Xc[[1]][[1]][2,],type="l",lwd=2)
+plot(gcica[[1]]$S[[1]][2,],type="l",lwd=2,col="red")
+plot(Xc[[1]][[1]][3,],type="l",lwd=2)
+plot(gcica[[1]]$S[[1]][3,],type="l",lwd=2,col="red")
 ```
 
 
