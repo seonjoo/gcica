@@ -23,8 +23,9 @@ source('gcica_dwst_cica_R_translate.R')
 
 
 ```{r Group cICA dwst example, message=FALSE, warning=FALSE}
-N=256
-M=3
+set.seed(17)
+N = 128
+M = 3
 A1 = rerow(matrix(runif(M^2)-0.5,M,M))
 A2 = rerow(matrix(runif(M^2)+1,M,M))
 W1 = solve(A1)
@@ -40,7 +41,7 @@ Xc = list(male, female)
 
 start_time = Sys.time()
 
-gcica = gcica_bss_dwst(Xc)
+gcica = gcica_bss_dwst(Xc, num_cores = 4)
 
 end_time = Sys.time()
 
@@ -49,13 +50,23 @@ end_time - start_time
 amari_distance(W1, gcica[[1]]$W)
 amari_distance(W2, gcica[[2]]$W)
 
-par(mfrow=c(2,2))
+# Plot Source Comparison for the first male subject
+par(mfrow=c(3,2))
 plot(Xc[[1]][[1]][1,],type="l",lwd=2)
 plot(gcica[[1]]$S[[1]][1,],type="l",lwd=2,col="red")
 plot(Xc[[1]][[1]][2,],type="l",lwd=2)
 plot(gcica[[1]]$S[[1]][2,],type="l",lwd=2,col="red")
 plot(Xc[[1]][[1]][3,],type="l",lwd=2)
 plot(gcica[[1]]$S[[1]][3,],type="l",lwd=2,col="red")
+
+# Plot Source Comparison for the first female subject
+par(mfrow=c(3,2))
+plot(Xc[[2]][[1]][1,],type="l",lwd=2)
+plot(gcica[[2]]$S[[1]][1,],type="l",lwd=2,col="red")
+plot(Xc[[2]][[1]][2,],type="l",lwd=2)
+plot(gcica[[2]]$S[[1]][2,],type="l",lwd=2,col="red")
+plot(Xc[[2]][[1]][3,],type="l",lwd=2)
+plot(gcica[[2]]$S[[1]][3,],type="l",lwd=2,col="red")
 ```
 
 
