@@ -23,81 +23,6 @@ source('gcica_dwst_cica_R_translate.R')
 ```
 
 
-```{r Group cICA dwst example with random matrices, message=FALSE, warning=FALSE}
-set.seed(17)
-N = 128
-M = 3
-A1 = rerow(matrix(runif(M^2)-0.5,M,M))
-A2 = rerow(matrix(runif(M^2)*2,M,M))
-W1 = solve(A1)
-W2 = solve(A2)
-W = list(W1, W2)
-
-male = list(matrix(rnorm(M*N),M,N),matrix(runif(M*N),M,N),matrix(rnorm(M*N),M,N),matrix(rnorm(M*N),M,N),matrix(runif(M*N),M,N))
-female = list(matrix(rnorm(M*N),M,N),matrix(runif(M*N),M,N),matrix(rnorm(M*N),M,N))
-
-male = lapply(1:length(male), function(i){A1 %*% male[[i]]})
-female = lapply(1:length(female), function(i){A2 %*% female[[i]]})
-
-Xc = list(male, female)
-
-# Number of groups
-num_group = length(Xc)
-
-# Number of subjects in each group
-num_group_subject = lapply(1:num_group, function(i){
-    return(length(Xc[[i]]))
-  })
-
-start_time = Sys.time()
-
-gcica = gcica_bss_dwst(Xc, maxit = 100, num_cores = 4)
-
-end_time = Sys.time()
- 
-end_time - start_time
-
-for (i in 1:length(Xc)){
-  print(amari_distance(W[[i]], gcica[[i]]$W))
-}
-
-
-# Plot Source Comparison for the first male subject
-par(mfrow=c(3,2))
-plot(Xc[[1]][[1]][1,],type="l",lwd=2)
-plot(gcica[[1]]$S[[1]][1,],type="l",lwd=2,col="red")
-plot(Xc[[1]][[1]][2,],type="l",lwd=2)
-plot(gcica[[1]]$S[[1]][2,],type="l",lwd=2,col="red")
-plot(Xc[[1]][[1]][3,],type="l",lwd=2)
-plot(gcica[[1]]$S[[1]][3,],type="l",lwd=2,col="red")
-
-# Plot Source Comparison for the first female subject
-par(mfrow=c(3,2))
-plot(Xc[[2]][[1]][1,],type="l",lwd=2)
-plot(gcica[[2]]$S[[1]][1,],type="l",lwd=2,col="red")
-plot(Xc[[2]][[1]][2,],type="l",lwd=2)
-plot(gcica[[2]]$S[[1]][2,],type="l",lwd=2,col="red")
-plot(Xc[[2]][[1]][3,],type="l",lwd=2)
-plot(gcica[[2]]$S[[1]][3,],type="l",lwd=2,col="red")
-
-# Number of groups
-num_group = length(Xc)
-
-# Number of subjects in each group
-num_group_subject = lapply(1:num_group, function(i){
-    return(length(Xc[[i]]))
-  })
-
-
-cor_list = lapply(1:length(Xc), function(i){
-  lapply(1:num_group_subject[[i]], function(j){
-    lapply(1:M, function(m){
-      cor(Xc[[i]][[j]][m,], gcica[[i]]$S[[j]][m,])
-    })
-  })
-})
-```
-
 ```{r Group cICA dwst example with random time series, message=FALSE, warning=FALSE}
 N = 128
 M = 3
@@ -132,7 +57,7 @@ end_time = Sys.time()
 end_time - start_time
 
 for (i in 1:length(Xc)){
-  print(amari_distance(W[[i]], gcica[[i]]$W))
+  print(amari_distance(rerow(W[[i]]), rerow(gcica[[i]]$W)))
 }
 
 

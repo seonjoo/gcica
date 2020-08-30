@@ -14,7 +14,7 @@
 
 gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
                            tol = 1e-04, maxit = 50, nmaxit = 1,
-                           maxnmodels = 10, prewhite = 1, num_cores = 2) {
+                           maxnmodels = 10, prewhite = T, num_cores = 2) {
   #################
   # Load packages #
   #################
@@ -87,7 +87,7 @@ gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
   result = foreach(i = 1:num_group) %dopar% {
     #lapply(1:num_group, function(i){
     # Prewhite
-    if (prewhite == 1){
+    if (prewhite){
     svdcovmat = Xc[[i]]
     K = Xc[[i]]
     for (j in 1:num_group_subject[[i]]) {
