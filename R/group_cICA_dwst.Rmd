@@ -28,9 +28,7 @@ N = 128
 M = 3
 A1 = rerow(matrix(runif(M^2)-0.5,M,M))
 A2 = rerow(matrix(runif(M^2)*2,M,M))
-W1 = solve(A1)
-W2 = solve(A2)
-W = list(W1, W2)
+W = list(solve(A1), solve(A2))
 
 male = list(t(makeTSnoise(128, 3, 2)$w), t(makeTSnoise(128, 3, 3)$w), t(makeTSnoise(128, 3, 4)$w), t(makeTSnoise(128, 3, 5)$w), t(makeTSnoise(128, 3, 6)$w))
 female = list(t(makeTSnoise(128, 3, 7)$w), t(makeTSnoise(128, 3, 8)$w), t(makeTSnoise(128, 3, 9)$w))
@@ -95,6 +93,8 @@ cor_list = lapply(1:length(Xc), function(i){
     })
   })
 })
+
+print(cor_list)
 ```
 
 
