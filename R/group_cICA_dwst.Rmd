@@ -25,13 +25,46 @@ source('gcica_dwst_cica_R_translate.R')
 
 ```{r Group cICA dwst example with random time series, message=FALSE, warning=FALSE}
 N = 128
-M = 3
+M = 2
 A1 = rerow(matrix(runif(M^2)-0.5,M,M))
-A2 = rerow(matrix(runif(M^2)*2,M,M))
+A2 = rerow(matrix(runif(M^2)+1,M,M))
+A = list(A1, A2)
 W = list(solve(A1), solve(A2))
 
-male = list(t(makeTSnoise(128, 3, 2)$w), t(makeTSnoise(128, 3, 3)$w), t(makeTSnoise(128, 3, 4)$w), t(makeTSnoise(128, 3, 5)$w), t(makeTSnoise(128, 3, 6)$w))
-female = list(t(makeTSnoise(128, 3, 7)$w), t(makeTSnoise(128, 3, 8)$w), t(makeTSnoise(128, 3, 9)$w))
+simulate_HCP_1 = function(num_group_subject, M, N){
+  rep(list(rbind(rep(list(arima.sim(list(order=c(0,0,1),ma=0.5),N)[]),M))), num_group_subject)
+}
+
+simulate_HCP_2 = function(num_group_subject, M, N){
+  rep(list(rbind(rep(list(arima.sim(list(order=c(1,0,0), ar=-0.5),N,rand.gen = function(n, ...) (runif(n)-0.5)*sqrt(3))[]),M))), num_group_subject)
+}
+
+# male = simulate_HCP_1(5,M,N)
+# female = simulate_HCP_2(3,M,N)
+
+#male = list(t(makeTSnoise(N, M, 2)$w), t(makeTSnoise(N, M, 3)$w), t(makeTSnoise(N, M, 4)$w), t(makeTSnoise(N, M, 5)$w), t(makeTSnoise(N, M, 6)$w))
+#female = list(t(makeTSnoise(N, M, 7)$w), t(makeTSnoise(N, M, 8)$w), t(makeTSnoise(N, M, 9)$w))
+
+male = list(
+ rbind(
+    arima.sim(list(order=c(0,0,1), ma=0.5),N),
+    arima.sim(list(order=c(0,0,2), ma=c(1,0.25)),N)),
+ rbind(
+    arima.sim(list(order=c(0,0,1), ma=0.5),N),
+    arima.sim(list(order=c(0,0,2), ma=c(1,0.25)),N)),
+ rbind(
+    arima.sim(list(order=c(0,0,1), ma=0.5),N),
+    arima.sim(list(order=c(0,0,2), ma=c(1,0.25)),N))
+)
+
+female = list(
+ rbind(
+    arima.sim(list(order=c(1,0,0), ar=0.8),N),
+    arima.sim(list(order=c(1,0,0), ar=-0.8),N)),
+  rbind(
+    arima.sim(list(order=c(1,0,0), ar=0.8),N),
+    arima.sim(list(order=c(1,0,0), ar=-0.8),N))
+)
 
 male = lapply(1:length(male), function(i){A1 %*% male[[i]]})
 female = lapply(1:length(female), function(i){A2 %*% female[[i]]})
@@ -48,34 +81,38 @@ num_group_subject = lapply(1:num_group, function(i){
 
 start_time = Sys.time()
 
-gcica = gcica_bss_dwst(Xc, maxit = 100, num_cores = 4)
+gcica = gcica_bss_dwst(Xc, num_cores = 4)
 
 end_time = Sys.time()
  
 end_time - start_time
 
 for (i in 1:length(Xc)){
-  print(amari_distance(rerow(W[[i]]), rerow(gcica[[i]]$W)))
+  print(amari_distance(rerow(A[[i]]) %>% t(), rerow(gcica[[i]]$A) %>% t()))
+}
+
+for (i in 1:length(Xc)){
+  print(amari_distance(rerow(W[[i]]) %>% t(), rerow(gcica[[i]]$W) %>% t()))
 }
 
 
 # Plot Source Comparison for the first male subject
-par(mfrow=c(3,2))
+par(mfrow=c(2,2))
 plot(Xc[[1]][[1]][1,],type="l",lwd=2)
 plot(gcica[[1]]$S[[1]][1,],type="l",lwd=2,col="red")
 plot(Xc[[1]][[1]][2,],type="l",lwd=2)
 plot(gcica[[1]]$S[[1]][2,],type="l",lwd=2,col="red")
-plot(Xc[[1]][[1]][3,],type="l",lwd=2)
-plot(gcica[[1]]$S[[1]][3,],type="l",lwd=2,col="red")
+#plot(Xc[[1]][[1]][3,],type="l",lwd=2)
+#plot(gcica[[1]]$S[[1]][3,],type="l",lwd=2,col="red")
 
 # Plot Source Comparison for the first female subject
-par(mfrow=c(3,2))
+par(mfrow=c(2,2))
 plot(Xc[[2]][[1]][1,],type="l",lwd=2)
 plot(gcica[[2]]$S[[1]][1,],type="l",lwd=2,col="red")
 plot(Xc[[2]][[1]][2,],type="l",lwd=2)
 plot(gcica[[2]]$S[[1]][2,],type="l",lwd=2,col="red")
-plot(Xc[[2]][[1]][3,],type="l",lwd=2)
-plot(gcica[[2]]$S[[1]][3,],type="l",lwd=2,col="red")
+#plot(Xc[[2]][[1]][3,],type="l",lwd=2)
+#plot(gcica[[2]]$S[[1]][3,],type="l",lwd=2,col="red")
 
 # Number of groups
 num_group = length(Xc)
@@ -94,7 +131,7 @@ cor_list = lapply(1:length(Xc), function(i){
   })
 })
 
-print(cor_list)
+#print(cor_list)
 ```
 
 
