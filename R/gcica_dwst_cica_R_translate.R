@@ -97,6 +97,7 @@ gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
       K[[j]] = K[[j]][1:M, ]
       Xc[[i]][[j]] = K[[j]] %*% Xc[[i]][[j]]
     }
+  }
 
 
     wlik = -Inf
@@ -243,7 +244,7 @@ gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
       W2 = Wtmp
       wlik2 = wlik
     }
-  }
+
 
     wt = lapply(1:num_group_subject[[i]], function(j){W2 %*% K[[j]]})
     result = new.env()
