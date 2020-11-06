@@ -13,7 +13,7 @@
 
 
 gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
-                           tol = 1e-04, maxit = 50, nmaxit = 1,
+                           tol = 1e-06, maxit = 100, nmaxit = 1,
                            maxnmodels = 10, prewhite = T, num_cores = 2) {
   #################
   # Load packages #
@@ -79,22 +79,26 @@ gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
   # Number of groups
   num_group = length(Xc)
 
+  # Remove subject with different number of columns
+  for (i in 1:num_group){
+    Xc[[i]] = Xc[[i]][sapply(Xc[[i]], function(x) ncol(x) == N)]
+  }
+  
   # Number of subjects in each group
   num_group_subject = lapply(1:num_group, function(i){
     return(length(Xc[[i]]))
   })
+  
 
   result = foreach(i = 1:num_group) %dopar% {
-    #lapply(1:num_group, function(i){
+    # lapply(1:num_group, function(i){
     # Prewhite
     if (prewhite){
-    svdcovmat = Xc[[i]]
-    K = Xc[[i]]
+    K = list()
     for (j in 1:num_group_subject[[i]]) {
       Xc[[i]][[j]] = t(scale(t(Xc[[i]][[j]]), center=TRUE, scale=FALSE))
-      svdcovmat[[j]] = svd(Xc[[i]][[j]]/sqrt(N))
-      K[[j]] = t(svdcovmat[[j]]$u %*% diag(1/svdcovmat[[j]]$d))
-      K[[j]] = K[[j]][1:M, ]
+      svdcovmat = svd(Xc[[i]][[j]]/sqrt(N))
+      K[[j]] = t(svdcovmat$u %*% diag(1/svdcovmat$d))[1:M, ]
       Xc[[i]][[j]] = K[[j]] %*% Xc[[i]][[j]]
     }
   }
@@ -239,6 +243,7 @@ gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
       if (NInv == nmaxit) {
         print("Color ICA: no convergence")
       }
+      print(W2)
     }
     if (wlik > wlik2) {
       W2 = Wtmp
@@ -250,12 +255,14 @@ gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
     result = new.env()
     result$W = W2
     result$K = K
-    result$A = solve(W2)
-    result$S = lapply(1:num_group_subject[[i]], function(j){wt[[j]] %*% Xc[[i]][[j]]})
+    result$A = lapply(1:num_group_subject[[i]], function(j){t(wt[[j]]) %*% solve(wt[[j]] %*% t(wt[[j]]))})
+    result$S = lapply(1:num_group_subject[[i]], function(j){W2 %*% Xc[[i]][[j]]})
     #result$X = Xc[[i]]
     result$iter = iter
     result$NInv = NInv
     result$den = g
+    result$taucount = taucount
+    result$X = Xc[[i]]
     result = as.list(result)
     return(result)
 }
