@@ -30,7 +30,9 @@ M = 2
 W1 = rerow(matrix(runif(M^2)-0.5,M,M))
 W2 = rerow(matrix(runif(M^2)+1,M,M))
 W = list(W1, W2)
-A = list(solve(W1), solve(W2))
+A1 = solve(W1)
+A2 = solve(W2)
+A = list(A1, A2)
 
 # simulate_HCP_1 = function(num_group_subject, M, N){
 #   rep(list(rbind(rep(list(arima.sim(list(order=c(0,0,1),ma=0.5),N)[]),M))), num_group_subject)
@@ -133,7 +135,7 @@ female_cor_list = lapply(1:length(female), function(i){
 ```
 
 ```{r}
-N = 512
+N = 256
 M = 2
 
 start_time = Sys.time()
@@ -146,16 +148,25 @@ simulation_result =
     W = list(W1, W2)
     A = list(solve(W1), solve(W2))
     
-    male = list(
- rbind(
-    arima.sim(list(order=c(0,0,1), ma=0.5),N),
-    arima.sim(list(order=c(0,0,2), ma=c(1,0.25)),N)),
- rbind(
-    arima.sim(list(order=c(0,0,1), ma=0.5),N),
-    arima.sim(list(order=c(0,0,2), ma=c(1,0.25)),N)),
- rbind(
-    arima.sim(list(order=c(0,0,1), ma=0.5),N),
-    arima.sim(list(order=c(0,0,2), ma=c(1,0.25)),N))
+male = list(
+ # rbind(
+ #    arima.sim(list(order=c(0,0,1), ma=0.5),N),
+ #    arima.sim(list(order=c(0,0,2), ma=c(1,0,0.25)),N)),
+ # rbind(
+ #    arima.sim(list(order=c(0,0,1), ma=0.5),N),
+ #    arima.sim(list(order=c(0,0,2), ma=c(1,0,0.25)),N)),
+ # rbind(
+ #    arima.sim(list(order=c(0,0,1), ma=0.5),N),
+ #    arima.sim(list(order=c(0,0,2), ma=c(1,0,0.25)),N))
+  rbind(
+    arima.sim(list(order=c(1,0,0), ar=0.5),N),
+    arima.sim(list(order=c(1,0,0), ar=-0.5),N)),
+  rbind(
+    arima.sim(list(order=c(1,0,0), ar=0.5),N),
+    arima.sim(list(order=c(1,0,0), ar=-0.5),N)),
+  rbind(
+    arima.sim(list(order=c(1,0,0), ar=0.5),N),
+    arima.sim(list(order=c(1,0,0), ar=-0.5),N))
 )
 
 female = list(

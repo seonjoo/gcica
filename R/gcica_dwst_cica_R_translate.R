@@ -10,18 +10,22 @@
 #' @export
 #'
 #' @examples
+#' 
+#################
+# Load packages #
+#################
+library(doParallel)
+library(pracma)
+library(itsmr)
+library(coloredICA)
 
 
 gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
                            tol = 1e-06, maxit = 100, nmaxit = 1,
                            maxnmodels = 10, prewhite = T, num_cores = 2) {
-  #################
-  # Load packages #
-  #################
-  library(doParallel)
-  library(pracma)
-  library(itsmr)
+
   registerDoParallel(cores = num_cores)
+  
   #################################################
   # Modified Yule-Walker Algorithm for Group Data #
   #################################################
@@ -46,7 +50,7 @@ gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
       V = v * solve(Gamma)
       se.phi = sqrt(1/n * diag(V))
       a = list(phi = phi, theta = 0, sigma2 = NA, aicc = NA, se.phi = se.phi,
-                se.theta = 0)
+               se.theta = 0)
       a1 = lapply(1:nrow(Xc), function(i){.innovation.update(Xc[i,], a)})
       a = list(phi = phi, theta = 0,
                sigma2 = do.call(sum, lapply(1:nrow(Xc), function(i){a1[[i]]$sigma2}))/nrow(Xc),
@@ -64,7 +68,7 @@ gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
     }
     return(a)
   }
-
+  
   #################
   # Preprocessing #
   #################
@@ -171,6 +175,7 @@ gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
       eigenval = rep(0, M)
 
       while (taucount < 60 & err > 1e-05 & orthoerror > 1e-05) {
+        print(taucount)
         for (m in 1:M) {
           Gam = 0
           if (m > 1) {
@@ -195,7 +200,7 @@ gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
         taucount = taucount + 1
         tau = 2 * tau
       }
-
+      print(W2)
       wlik2 = -1 * sum(eigenval) - 1 * sum(log(g)) + N * log(abs(det(W2)))
       if (wlik < wlik2) {
         Wtmp = W1
@@ -243,7 +248,6 @@ gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
       if (NInv == nmaxit) {
         print("Color ICA: no convergence")
       }
-      print(W2)
     }
     if (wlik > wlik2) {
       W2 = Wtmp
