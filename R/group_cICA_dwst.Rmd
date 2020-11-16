@@ -24,7 +24,7 @@ source('gcica_dwst_cica_R_translate.R')
 ```
 
 
-```{r Group cICA dwst example with random time series, message=FALSE, warning=FALSE}
+```{r Group cICA dwst example with random time series, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 N = 128
 M = 2
 W1 = rerow(matrix(runif(M^2)-0.5,M,M))
@@ -137,6 +137,13 @@ female_cor_list = lapply(1:length(female), function(i){
 ```{r}
 N = 256
 M = 2
+
+W1 = rerow(matrix(runif(M^2)-0.5,M,M))
+W2 = rerow(matrix(runif(M^2)+1,M,M))
+W = list(W1, W2)
+A1 = solve(W1)
+A2 = solve(W2)
+A = list(A1, A2)
 
 start_time = Sys.time()
 

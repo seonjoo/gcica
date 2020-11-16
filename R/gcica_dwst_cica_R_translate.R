@@ -96,6 +96,9 @@ gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
 
   result = foreach(i = 1:num_group) %dopar% {
     # lapply(1:num_group, function(i){
+  
+    W_init = W1
+    
     # Prewhite
     if (prewhite){
     K = list()
@@ -118,13 +121,13 @@ gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
 
 
     # Initial source
-    WXc = Xc[[i]]
+    WXc = list()
     for (j in 1:num_group_subject[[i]]) {
       WXc[[j]] = W1 %*% Xc[[i]][[j]]
     }
 
     # Discrete Fourier Transformation
-    X_dftall = Xc[[i]]
+    X_dftall = list()
     for (j in 1:num_group_subject[[i]]) {
       X_dftall[[j]] = t(mvfft(t(Xc[[i]][[j]])))/sqrt(2 * pi * N)
     }
@@ -258,6 +261,7 @@ gcica_bss_dwst = function(Xc, M = nrow(Xc[[1]][[1]]), W1 = diag(M),
     wt = lapply(1:num_group_subject[[i]], function(j){W2 %*% K[[j]]})
     result = new.env()
     result$W = W2
+    result$W_init = W_init
     result$K = K
     result$A = lapply(1:num_group_subject[[i]], function(j){t(wt[[j]]) %*% solve(wt[[j]] %*% t(wt[[j]]))})
     result$S = lapply(1:num_group_subject[[i]], function(j){W2 %*% Xc[[i]][[j]]})
