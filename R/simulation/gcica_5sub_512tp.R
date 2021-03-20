@@ -5,10 +5,10 @@ library(parallel)
 library(ggplot2)
 source('../gcica_R_translate_single_group.R')
 
-n_sub = 2
+n_sub = 5
 S = 10
 M = 3
-N = 284
+N = 512
 
 start_time = Sys.time()
 
@@ -17,6 +17,18 @@ male_simulation = mclapply(1:S, function(i){
   W = solve(A)
 
   male = list(
+   rbind(
+      arima.sim(list(order=c(1,0,0), ar=-0.8),N),
+      arima.sim(list(order=c(2,0,0), ar=c(0.9, -0.2)),N),
+      arima.sim(list(order=c(2,0,0), ar=c(1.6,-0.64)),N)),
+    rbind(
+      arima.sim(list(order=c(1,0,0), ar=-0.8),N),
+      arima.sim(list(order=c(2,0,0), ar=c(0.9, -0.2)),N),
+      arima.sim(list(order=c(2,0,0), ar=c(1.6,-0.64)),N)),
+    rbind(
+      arima.sim(list(order=c(1,0,0), ar=-0.8),N),
+      arima.sim(list(order=c(2,0,0), ar=c(0.9, -0.2)),N),
+      arima.sim(list(order=c(2,0,0), ar=c(1.6,-0.64)),N)),
     rbind(
       arima.sim(list(order=c(1,0,0), ar=-0.8),N),
       arima.sim(list(order=c(2,0,0), ar=c(0.9, -0.2)),N),

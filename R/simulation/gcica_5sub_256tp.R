@@ -1,23 +1,34 @@
-# .libPaths('/ifs/scratch/msph/LeeLab/software/R/hpc') # set the R library in C2B2
+.libPaths('/ifs/scratch/msph/LeeLab/software/R/hpc') # set the R library in C2B2
 library(dplyr)
 library(coloredICA)
-library(doParallel)
+library(parallel)
 library(ggplot2)
-registerDoParallel(cores = 12)
 source('../gcica_R_translate_single_group.R')
 
-n_sub = 2
+n_sub = 5
 S = 10
 M = 3
-N = 512
+N = 256
 
 start_time = Sys.time()
 
-male_simulation = lapply(1:S, function(i){
+male_simulation = mclapply(1:S, function(i){
   A = rerow(matrix(runif(M^2)-0.5,M,M))
   W = solve(A)
 
   male = list(
+    rbind(
+      arima.sim(list(order=c(1,0,0), ar=-0.8),N),
+      arima.sim(list(order=c(2,0,0), ar=c(0.9, -0.2)),N),
+      arima.sim(list(order=c(2,0,0), ar=c(1.6,-0.64)),N)),
+    rbind(
+      arima.sim(list(order=c(1,0,0), ar=-0.8),N),
+      arima.sim(list(order=c(2,0,0), ar=c(0.9, -0.2)),N),
+      arima.sim(list(order=c(2,0,0), ar=c(1.6,-0.64)),N)),
+    rbind(
+      arima.sim(list(order=c(1,0,0), ar=-0.8),N),
+      arima.sim(list(order=c(2,0,0), ar=c(0.9, -0.2)),N),
+      arima.sim(list(order=c(2,0,0), ar=c(1.6,-0.64)),N)),
     rbind(
       arima.sim(list(order=c(1,0,0), ar=-0.8),N),
       arima.sim(list(order=c(2,0,0), ar=c(0.9, -0.2)),N),
@@ -49,7 +60,7 @@ male_simulation = lapply(1:S, function(i){
   result$time_cost = total_sim_time
   result = as.list(result)
   return(result)
-})
+}, mc.cores = 10)
 
 print(Sys.time() - start_time)
 
