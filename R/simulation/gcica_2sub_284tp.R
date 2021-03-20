@@ -1,9 +1,9 @@
-.libPaths('/ifs/scratch/msph/LeeLab/software/R/hpc') # set the R library in C2B2
+.libPaths(\"/ifs/scratch/msph/LeeLab/software/R/hpc"\)
 library(dplyr)
 library(coloredICA)
 library(parallel)
 library(ggplot2)
-source('../gcica_R_translate_single_group.R')
+source("../gcica_R_translate_single_group.R")
 
 n_sub = 2
 S = 10
@@ -36,7 +36,7 @@ male_simulation = mclapply(1:S, function(i){
   male_cor_list = lapply(1:n_sub, function(i){
     lapply(1:M, function(m){
       lapply(1:M, function(j){
-        cor.test(male[[i]][m,], gcica$S[[i]][j,], method = 'spearman')$estimate %>% abs()
+        cor.test(male[[i]][m,], gcica$S[[i]][j,], method = "spearman")$estimate %>% abs()
       }) %>% unlist() %>% max()
     })
   })
@@ -66,16 +66,8 @@ male_cor_df = do.call("rbind", lapply(1:S, function(s){
   as.data.frame() %>%
   mutate(
     simulation = as.factor(simulation),
-    subject = paste('subject', subject),
+    subject = paste("subject", subject),
     source = as.factor(source)
   )
 
-write.csv(male_cor_df, paste(n_sub, 'sub_', M, 'comp', N, 'tp.csv', sep = ''), row.names=FALSE)
-
-# png(paste(n_sub, 'sub_', N, 'tp.png', sep = ''))
-# male_cor_df %>%
-#   ggplot(aes(x = source, y = cor)) +
-#   geom_boxplot() + facet_wrap(~subject)
-# dev.off()
-# save.image('/ifs/scratch/msph/LeeLab/qz2392/')
-
+write.csv(male_cor_df, paste(n_sub, "sub_", M, "comp_", N, "tp.csv", sep = ""), row.names=FALSE)

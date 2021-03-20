@@ -3,7 +3,7 @@ library(dplyr)
 library(coloredICA)
 library(parallel)
 library(ggplot2)
-source('../gcica_R_translate_single_group.R')
+source('/ifs/scratch/msph/LeeLab/qz2392/gcica/gcica_R_translate_single_group.R')
 
 n_sub = 10
 S = 10
@@ -102,12 +102,4 @@ male_cor_df = do.call("rbind", lapply(1:S, function(s){
     source = as.factor(source)
   )
 
-write.csv(male_cor_df, paste(n_sub, 'sub_', M, 'comp', N, 'tp.csv', sep = ''), row.names=FALSE)
-
-# png(paste(n_sub, 'sub_', N, 'tp.png', sep = ''))
-# male_cor_df %>%
-#   ggplot(aes(x = source, y = cor)) +
-#   geom_boxplot() + facet_wrap(~subject)
-# dev.off()
-# save.image('/ifs/scratch/msph/LeeLab/qz2392/')
-
+write.csv(male_cor_df, paste(n_sub, 'sub_', M, 'comp_', N, 'tp.csv', sep = ''), row.names=FALSE)
