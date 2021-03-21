@@ -1,4 +1,4 @@
-.libPaths(\"/ifs/scratch/msph/LeeLab/software/R/hpc"\)
+.libPaths("/ifs/scratch/msph/LeeLab/software/R/hpc")
 library(dplyr)
 library(coloredICA)
 library(parallel)
@@ -70,4 +70,4 @@ male_cor_df = do.call("rbind", lapply(1:S, function(s){
     source = as.factor(source)
   )
 
-write.csv(male_cor_df, paste(n_sub, "sub_", M, "comp_", N, "tp.csv", sep = ""), row.names=FALSE)
+write.csv(male_cor_df, paste(n_sub, "sub_", M, "comp_", N, "tp.csv", sep = ""), row.names=FALSE);

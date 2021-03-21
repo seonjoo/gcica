@@ -1,5 +1,5 @@
 ---
-title: "Group cICA dwst"
+title: "Group cICA dwst simulation"
 author: "Qimin Zhang"
 output: html_document
 ---
@@ -8,266 +8,97 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(coloredICA)
-library(fastICA)
-library(rlist)
-library(listarrays)
-library(doParallel)
-library(pracma)
-library(dse)
+library(parallel)
 library(ggplot2)
-registerDoParallel(cores = 2)
-```
+n_core = 3
 
-
-```{r source group cICA dwst}
 source('gcica_dwst_cica_R_translate.R')
 ```
 
+```{r 2 sub 3 comp 284tp, message=FALSE, warning=FALSE}
+source('gcica_R_translate_single_group.R')
 
-```{r Group cICA dwst example with random time series, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
-N = 128
-M = 2
-W1 = rerow(matrix(runif(M^2)-0.5,M,M))
-W2 = rerow(matrix(runif(M^2)+1,M,M))
-W = list(W1, W2)
-A1 = solve(W1)
-A2 = solve(W2)
-A = list(A1, A2)
-
-# simulate_HCP_1 = function(num_group_subject, M, N){
-#   rep(list(rbind(rep(list(arima.sim(list(order=c(0,0,1),ma=0.5),N)[]),M))), num_group_subject)
-# }
-# 
-# simulate_HCP_2 = function(num_group_subject, M, N){
-#   rep(list(rbind(rep(list(arima.sim(list(order=c(1,0,0), ar=-0.5),N,rand.gen = function(n, ...) (runif(n)-0.5)*sqrt(3))[]),M))), num_group_subject)
-# }
-
-# male = simulate_HCP_1(5,M,N)
-# female = simulate_HCP_2(3,M,N)
-
-#male = list(t(makeTSnoise(N, M, 2)$w), t(makeTSnoise(N, M, 3)$w), t(makeTSnoise(N, M, 4)$w), t(makeTSnoise(N, M, 5)$w), t(makeTSnoise(N, M, 6)$w))
-#female = list(t(makeTSnoise(N, M, 7)$w), t(makeTSnoise(N, M, 8)$w), t(makeTSnoise(N, M, 9)$w))
-
-female = list(
- rbind(
-    arima.sim(list(order=c(0,0,1), ma=0.5),N),
-    arima.sim(list(order=c(0,0,2), ma=c(1,0.25)),N)),
- rbind(
-    arima.sim(list(order=c(0,0,1), ma=0.5),N),
-    arima.sim(list(order=c(0,0,2), ma=c(1,0.25)),N)),
- rbind(
-    arima.sim(list(order=c(0,0,1), ma=0.5),N),
-    arima.sim(list(order=c(0,0,2), ma=c(1,0.25)),N))
-)
-
-male = list(
- rbind(
-    arima.sim(list(order=c(1,0,0), ar=0.8),N),
-    arima.sim(list(order=c(1,0,0), ar=-0.8),N)),
-  rbind(
-    arima.sim(list(order=c(1,0,0), ar=0.8),N),
-    arima.sim(list(order=c(1,0,0), ar=-0.8),N))
-)
-
-
-Xc = list(lapply(1:length(male), function(i){A1 %*% male[[i]]}),
-          lapply(1:length(female), function(i){A2 %*% female[[i]]}))
-
-# Number of groups
-num_group = length(Xc)
-
-# Number of subjects in each group
-num_group_subject = lapply(1:num_group, function(i){
-    return(length(Xc[[i]]))
-  })
+S = 10
+M = 3
+N = 284
 
 start_time = Sys.time()
 
-gcica = gcica_bss_dwst(Xc, num_cores = 2)
-
-end_time = Sys.time()
+male_simulation = mclapply(1:S, function(i){
+  A = rerow(matrix(runif(M^2)-0.5,M,M))
+  W = solve(A)
+  
+  male = list(
+   rbind(
+      arima.sim(list(order=c(1,0,0), ar=-0.8),N),
+      #arima.sim(list(order=c(1,0,0), ar=0.2),N),
+      #arima.sim(list(order=c(1,0,0), ar=-0.8),N),
+      arima.sim(list(order=c(2,0,0), ar=c(0.9, -0.2)),N),
+      arima.sim(list(order=c(2,0,0), ar=c(1.6,-0.64)),N)),
+    rbind(
+      arima.sim(list(order=c(1,0,0), ar=-0.8),N),
+      #arima.sim(list(order=c(1,0,0), ar=0.2),N),
+      #arima.sim(list(order=c(1,0,0), ar=-0.8),N),
+      arima.sim(list(order=c(2,0,0), ar=c(0.9, -0.2)),N),
+      arima.sim(list(order=c(2,0,0), ar=c(1.6,-0.64)),N))
+  )
+  
+  num_subject = length(male)
+  male_input = lapply(1:num_subject, function(i){A %*% male[[i]]})
+  
+  start_sim_time = Sys.time()
+  gcica = gcica_bss_dwst_single(male_input, M = M, iter_print = 50)
+  total_sim_time = Sys.time() - start_sim_time
+  
+  male_cor_list = lapply(1:num_subject, function(i){
+    lapply(1:M, function(m){
+      lapply(1:M, function(j){
+        cor.test(male[[i]][m,], gcica$S[[i]][j,], method = 'spearman')$estimate %>% abs()
+      }) %>% unlist() %>% max()
+    })
+  })
+  
+  result = new.env()
+  result$male_cor_list = male_cor_list
+  result$wlik = gcica$wlik
+  result$amari = gcica$amari
+  result$time_cost = total_sim_time
+  result = as.list(result)
+  return(result)
+}, mc.cores=n_core)
  
-end_time - start_time
+Sys.time() - start_time
 
-
-A_amari_list = lapply(1:length(Xc), function(i){
-  lapply(1:num_group_subject[[i]], function(j){
-    amari_distance(t(A[[i]]), gcica[[i]]$A[[j]])
-  })
-})
-
-
-for (i in 1:length(Xc)){
-  print(amari_distance(rerow(W[[i]]) %>% t(), rerow(gcica[[i]]$W) %>% t()))
-}
-
-
-# Plot Source Comparison for the first male subject
-par(mfrow=c(2,2))
-plot(male[[1]][1,],type="l",lwd=2)
-plot(gcica[[1]]$S[[1]][1,],type="l",lwd=2,col="red")
-plot(male[[1]][2,],type="l",lwd=2)
-plot(gcica[[1]]$S[[1]][2,],type="l",lwd=2,col="red")
-#plot(Xc[[1]][[1]][3,],type="l",lwd=2)
-#plot(gcica[[1]]$S[[1]][3,],type="l",lwd=2,col="red")
-
-# Plot Source Comparison for the first female subject
-par(mfrow=c(2,2))
-plot(female[[1]][1,],type="l",lwd=2)
-plot(gcica[[2]]$S[[1]][1,],type="l",lwd=2,col="red")
-plot(female[[1]][2,],type="l",lwd=2)
-plot(gcica[[2]]$S[[1]][2,],type="l",lwd=2,col="red")
-#plot(Xc[[2]][[1]][3,],type="l",lwd=2)
-#plot(gcica[[2]]$S[[1]][3,],type="l",lwd=2,col="red")
-
-
-male_cor_list = lapply(1:length(male), function(i){
-  lapply(1:M, function(m){
-    cor(male[[i]][m,], gcica[[1]]$S[[i]][m,])
-  })
-})
-
-female_cor_list = lapply(1:length(female), function(i){
-  lapply(1:M, function(m){
-    cor(female[[i]][m,], gcica[[2]]$S[[i]][m,])
-  })
-})
-```
-
-```{r}
-N = 256
-M = 2
-
-W1 = rerow(matrix(runif(M^2)-0.5,M,M))
-W2 = rerow(matrix(runif(M^2)+1,M,M))
-W = list(W1, W2)
-A1 = solve(W1)
-A2 = solve(W2)
-A = list(A1, A2)
-
-start_time = Sys.time()
-
-simulation_result = 
-  lapply(1:10, function(seed){
-    set.seed(seed)
-    W1 = rerow(matrix(runif(M^2)-0.5,M,M))
-    W2 = rerow(matrix(runif(M^2)+1,M,M))
-    W = list(W1, W2)
-    A = list(solve(W1), solve(W2))
-    
-male = list(
- # rbind(
- #    arima.sim(list(order=c(0,0,1), ma=0.5),N),
- #    arima.sim(list(order=c(0,0,2), ma=c(1,0,0.25)),N)),
- # rbind(
- #    arima.sim(list(order=c(0,0,1), ma=0.5),N),
- #    arima.sim(list(order=c(0,0,2), ma=c(1,0,0.25)),N)),
- # rbind(
- #    arima.sim(list(order=c(0,0,1), ma=0.5),N),
- #    arima.sim(list(order=c(0,0,2), ma=c(1,0,0.25)),N))
-  rbind(
-    arima.sim(list(order=c(1,0,0), ar=0.5),N),
-    arima.sim(list(order=c(1,0,0), ar=-0.5),N)),
-  rbind(
-    arima.sim(list(order=c(1,0,0), ar=0.5),N),
-    arima.sim(list(order=c(1,0,0), ar=-0.5),N)),
-  rbind(
-    arima.sim(list(order=c(1,0,0), ar=0.5),N),
-    arima.sim(list(order=c(1,0,0), ar=-0.5),N))
-)
-
-female = list(
- rbind(
-    arima.sim(list(order=c(1,0,0), ar=0.8),N),
-    arima.sim(list(order=c(1,0,0), ar=-0.8),N)),
-  rbind(
-    arima.sim(list(order=c(1,0,0), ar=0.8),N),
-    arima.sim(list(order=c(1,0,0), ar=-0.8),N))
-)
-
-
-Xc = list(lapply(1:length(male), function(i){A1 %*% male[[i]]}),
-          lapply(1:length(female), function(i){A2 %*% female[[i]]}))
-
-# Number of groups
-num_group = length(Xc)
-
-# Number of subjects in each group
-num_group_subject = lapply(1:num_group, function(i){
-    return(length(Xc[[i]]))
-  })
-
-gcica = gcica_bss_dwst(Xc, num_cores = 2)
-
-male_cor_list = lapply(1:length(male), function(i){
-  cor(rbind(male[[i]], gcica[[1]]$S[[i]]) %>% t())
-})
-
-female_cor_list = lapply(1:length(female), function(i){
-  cor(rbind(female[[i]], gcica[[2]]$S[[i]]) %>% t())
-})
-
-result = new.env()
-result$male = male_cor_list
-result$female = female_cor_list
-return(result)
-  })
-
-end_time = Sys.time()
-
-end_time - start_time
-```
-
-```{r}
-top_M = function(list){
-  list = list %>% sort(decreasing = TRUE)
-  return(list[1:M])
-}
-
-simulation_cor_male = lapply(1:length(simulation_result), function(s){
-  lapply(1:length(simulation_result[[s]]$male), function(i){
-    simulation_result[[s]]$male[[i]][which(simulation_result[[s]]$male[[i]] < 1)] %>% unique() %>% lapply(abs) %>% as.numeric() %>% top_M()
-  })
-})
-
-simulation_cor_female = lapply(1:length(simulation_result), function(s){
-  lapply(1:length(simulation_result[[s]]$female), function(i){
-    simulation_result[[s]]$female[[i]][which(simulation_result[[s]]$female[[i]] < 1)] %>% unique() %>% lapply(abs) %>% as.numeric() %>% top_M() 
-  })
-})
-```
-
-```{r}
-male_df = cbind(seed = c(1:10),
-          subj1 = lapply(1:10, function(s){simulation_cor_male[[s]][[1]] %>% mean()}) %>% as.numeric(),
-          subj2 = lapply(1:10, function(s){simulation_cor_male[[s]][[2]] %>% mean()}) %>% as.numeric(),
-          subj3 = lapply(1:10, function(s){simulation_cor_male[[s]][[3]] %>% mean()}) %>% as.numeric()
-          ) %>% 
+male_cor_df = do.call("rbind", lapply(1:S, function(s){
+  do.call("rbind", lapply(1:2, function(j){
+    do.call("rbind", lapply(1:M, function(m){
+      c(simulation = s, subject = j, 
+        source = m, cor = male_simulation[[s]]$male_cor_list[[j]][[m]],
+        wlik = male_simulation[[s]]$wlik, amari = male_simulation[[s]]$amari,
+        time_cost = male_simulation[[s]]$time_cost)
+    }))
+  }))
+})) %>% 
   as.data.frame() %>% 
-  pivot_longer(cols = starts_with("sub"), names_to = "subject") %>% 
-  dplyr::rename(cor = value) %>% 
   mutate(
-    sex = 'male'
+    simulation = as.factor(simulation),
+    subject = paste('subject', subject),
+    source = as.factor(source)
   )
 
-female_df = cbind(seed = c(1:10),
-          subj1 = lapply(1:10, function(s){simulation_cor_female[[s]][[1]] %>% mean()}) %>% as.numeric(),
-          subj2 = lapply(1:10, function(s){simulation_cor_female[[s]][[2]] %>% mean()}) %>% as.numeric()
-          ) %>% 
-  as.data.frame() %>% 
-  pivot_longer(cols = starts_with("sub"), names_to = "subject") %>% 
-  dplyr::rename(cor = value) %>% 
-  mutate(
-    sex = 'female'
-  )
+male_cor_df %>% 
+  ggplot(aes(x = source, y = cor)) +
+  geom_boxplot() + facet_wrap(~subject)
 
-cor_df = rbind(male_df, female_df)
+male_cor_df %>% 
+  ggplot(aes(x = wlik)) +
+  geom_density()
+
+male_cor_df %>% 
+  ggplot(aes(x = amari)) +
+  geom_density()
+
+write.csv(male_cor_df, 'simulation_results/2sub_3comp_284tp.csv', row.names = FALSE)
 ```
 
-```{r}
-cor_df %>% 
-  ggplot(aes(x = subject, y = cor, group = subject)) +
-  geom_boxplot() + facet_grid(. ~ sex, scales = "free_x", space = "free_x") +
-  theme_bw()
-```
 
