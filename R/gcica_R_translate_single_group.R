@@ -14,7 +14,7 @@
 #################
 # Load packages #
 #################
-.libPaths('/ifs/scratch/msph/LeeLab/software/R/hpc') # set the R library
+.libPaths('/ifs/scratch/msph/LeeLab/softwares/R/hpc') # set the R library
 library(parallel)
 library(pracma)
 library(itsmr)
@@ -27,7 +27,7 @@ n_core = 10
 
 
 group_yw = function(Xc, maxnmodels = 10){
-  all_models = mclapply(1:maxnmodels, function(p){
+  all_models = lapply(1:maxnmodels, function(p){
     n = length(Xc[1,])
     gamma = lapply(1:nrow(Xc),function(i){
       x_center = Xc[i,] - mean(Xc[i,])
@@ -55,7 +55,7 @@ group_yw = function(Xc, maxnmodels = 10){
              se.phi = se.phi,
              se.theta = 0, p = p)
     return(a)
-  }, mc.cores=n_core)
+  })
   aicc_threshold = Inf
   for (i in 1:length(all_models)){
     if (all_models[[i]]$aicc < aicc_threshold){
@@ -133,7 +133,7 @@ gcica_bss_dwst_single = function(group, M = nrow(group[[1]]),
     return(tmp)
   })
   
-  g = do.call("rbind", mclapply(1:M, function(m){
+  g = do.call("rbind", lapply(1:M, function(m){
     fit = group_yw(sourcetsik[[m]], maxnmodels = maxnmodels)
     if (fit$p == 0){
       return(fit$sigma2/(2 * pi) * rep(1, freqlength))
@@ -142,7 +142,7 @@ gcica_bss_dwst_single = function(group, M = nrow(group[[1]]),
       return((fit$sigma2/(2 * pi))/(abs(1 - matrix(fit$phi, 1, fit$p) %*%
                                             exp(-(0+1i) * matrix(1:fit$p, fit$p, 1) %*% freq))^2))
     }
-  }, mc.cores=n_core))
+  }))
 
 
   #rm(list = c("WXc"))
@@ -173,7 +173,7 @@ gcica_bss_dwst_single = function(group, M = nrow(group[[1]]),
 
     while (taucount < 60 & err > 1e-05 & orthoerror > 1e-05) {
       #print(taucount)
-      W2 = do.call("rbind", mclapply(1:M, function(m){
+      W2 = do.call("rbind", lapply(1:M, function(m){
         Gam = 0
         if (m > 1) {
           Gam = do.call("sum", lapply(1:(m - 1), function(k){
@@ -188,7 +188,7 @@ gcica_bss_dwst_single = function(group, M = nrow(group[[1]]),
         eigenv = eigen(tmpV)
         eigenval[m] = eigenv$values[M]
         return(eigenv$vectors[,M])
-      }, mc.cores=n_core))
+      }))
       
       orthoerror = sum(sum((W2 %*% t(W2) - diag(rep(1,M)))^2))
       err = amari_distance(rerow(W1), rerow(W2))
@@ -260,7 +260,7 @@ gcica_bss_dwst_single = function(group, M = nrow(group[[1]]),
       return(tmp)
     })
     
-    g = do.call("rbind", mclapply(1:M, function(m){
+    g = do.call("rbind", lapply(1:M, function(m){
       fit = group_yw(sourcetsik[[m]])
       if (fit$p == 0){
         return(fit$sigma2/(2 * pi) * rep(1, freqlength))
@@ -269,7 +269,7 @@ gcica_bss_dwst_single = function(group, M = nrow(group[[1]]),
         return((fit$sigma2/(2 * pi))/(abs(1 - matrix(fit$phi, 1, fit$p) %*%
                                             exp(-(0+1i) * matrix(1:fit$p, fit$p, 1) %*% freq))^2))
       }
-    }, mc.cores=n_core))
+    }))
 
     if (NInv == nmaxit) {
       print("Group Color ICA: no convergence")

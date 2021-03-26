@@ -1,9 +1,11 @@
-.libPaths('/ifs/scratch/msph/LeeLab/software/R/hpc') # set the R library in C2B2
+.libPaths('/ifs/scratch/msph/LeeLab/softwares/R/hpc') # set the R library in C2B2
 library(dplyr)
 library(coloredICA)
 library(parallel)
 library(ggplot2)
 source('../gcica_R_translate_single_group.R')
+
+n_core = 10
 
 n_sub = 5
 S = 10
@@ -60,7 +62,7 @@ male_simulation = mclapply(1:S, function(i){
   result$time_cost = total_sim_time
   result = as.list(result)
   return(result)
-}, mc.cores = 10)
+}, mc.cores = n_core)
 
 print(Sys.time() - start_time)
 

@@ -1,9 +1,11 @@
-.libPaths("/ifs/scratch/msph/LeeLab/software/R/hpc")
+.libPaths('/ifs/scratch/msph/LeeLab/softwares/R/hpc')
 library(dplyr)
 library(coloredICA)
 library(parallel)
 library(ggplot2)
 source("../gcica_R_translate_single_group.R")
+
+n_core = 10
 
 n_sub = 2
 S = 10
@@ -12,7 +14,7 @@ N = 284
 
 start_time = Sys.time()
 
-male_simulation = mclapply(1:S, function(i){
+male_simulation = lapply(1:S, function(i){
   A = rerow(matrix(runif(M^2)-0.5,M,M))
   W = solve(A)
 
@@ -48,7 +50,7 @@ male_simulation = mclapply(1:S, function(i){
   result$time_cost = total_sim_time
   result = as.list(result)
   return(result)
-}, mc.cores = 10)
+})
 
 print(Sys.time() - start_time)
 
@@ -70,4 +72,4 @@ male_cor_df = do.call("rbind", lapply(1:S, function(s){
     source = as.factor(source)
   )
 
-write.csv(male_cor_df, paste(n_sub, "sub_", M, "comp_", N, "tp.csv", sep = ""), row.names=FALSE);
+write.csv(male_cor_df, paste(n_sub, "sub_", M, "comp_", N, "tp.csv", sep = ""), row.names=FALSE)

@@ -1,0 +1,56 @@
+---
+title: "Group cICA dwst simulation"
+author: "Qimin Zhang"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(coloredICA)
+library(parallel)
+library(ggplot2)
+```
+
+
+```{r 2 sub 3 comp 284tp, message=FALSE, warning=FALSE}
+male_cor_df = read_csv('2sub_3comp_284tp.csv') %>% 
+  as.data.frame() %>% 
+  mutate(
+    simulation = as.factor(simulation),
+    source = as.factor(source)
+  )
+
+male_cor_df %>% 
+  ggplot(aes(x = source, y = cor)) +
+  geom_boxplot() + facet_wrap(~subject)
+
+male_cor_df %>% 
+  ggplot(aes(x = wlik)) +
+  geom_density()
+
+male_cor_df %>% 
+  ggplot(aes(x = amari)) +
+  geom_density()
+```
+
+```{r 5 sub 3 comp 256tp, message=FALSE, warning=FALSE}
+male_cor_df = read_csv('5sub_3comp_256tp.csv') %>% 
+  as.data.frame() %>% 
+  mutate(
+    simulation = as.factor(simulation),
+    source = as.factor(source)
+  )
+
+male_cor_df %>% 
+  ggplot(aes(x = source, y = cor)) +
+  geom_boxplot() + facet_wrap(~subject)
+
+male_cor_df %>% 
+  ggplot(aes(x = wlik)) +
+  geom_density()
+
+male_cor_df %>% 
+  ggplot(aes(x = amari)) +
+  geom_density()
+```
